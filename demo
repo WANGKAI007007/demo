@@ -3,8 +3,6 @@ from tkinter import filedialog
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import sys
-import os
 
 
 def main():
@@ -24,8 +22,8 @@ def main():
         if filename:
             # 在标签上显示选择的文件名
             selected_file_label.config(text=filename)
-            # 处理Excel文件
-            process_excel_file(filename)
+            # 保存文件名，以备处理
+            window.filename = filename
 
     open_button = tk.Button(
         text='选择Excel文件',
@@ -74,8 +72,21 @@ def main():
     wind_col_label.pack()
     wind_col_entry.pack()
 
-    # 处理Excel文件的函数
-    def process_excel_file(filename):
+    # 添加一个标签，用于显示处理完成的消息
+    process_label = tk.Label(
+        text=''
+    )
+    process_label.pack()
+
+    # 添加一个标签，用于显示错误消息
+    error_label = tk.Label(
+        text='',
+        fg='red'
+    )
+    error_label.pack()
+
+    # 开始处理Excel文件的函数
+    def start_processing():
         # 获取用户指定的列名称
         city_col = city_col_entry.get()
         date_col = date_col_entry.get()
