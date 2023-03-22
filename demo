@@ -86,25 +86,25 @@ def main():
     error_label.pack()
 
     # 开始处理Excel文件的函数
-    def start_processing():
-        # 获取用户指定的列名称
-        city_col = city_col_entry.get()
-        date_col = date_col_entry.get()
+def start_processing():
+    # 获取用户指定的列名称
+    city_col = city_col_entry.get()
+    date_col = date_col_entry.get()
 
-        # 获取用户指定的固定列名称
-        temp_col = temp_col_entry.get()
-        weather_col = weather_col_entry.get()
-        wind_col = wind_col_entry.get()
+    # 获取用户指定的固定列名称
+    temp_col = temp_col_entry.get()
+    weather_col = weather_col_entry.get()
+    wind_col = wind_col_entry.get()
 
-        # 检查列名称是否有效
-        if not city_col or not date_col:
-            error_label.config(text='请指定城市和日期的列名称')
-            return
-        elif city_col == date_col:
-            error_label.config(text='城市和日期的列名称不能相同')
-            return
-        else:
-            error_label.config(text='')
+    # 检查列名称是否有效
+    if not city_col or not date_col:
+        error_label.config(text='请指定城市和日期的列名称')
+        return
+    elif city_col == date_col:
+        error_label.config(text='城市和日期的列名称不能相同')
+        return
+    else:
+        error_label.config(text='')
 
     # 指定要读取的列
     columns_to_read = [city_col, date_col]
@@ -113,7 +113,7 @@ def main():
     columns_to_write = [temp_col, weather_col, wind_col]
 
     # 读取Excel文件
-    df = pd.read_excel(filename, usecols=columns_to_read)
+    df = pd.read_excel(window.filename, usecols=columns_to_read)
 
     # 创建一个空的DataFrame，用于存储查找结果
     result_df = pd.DataFrame(columns=columns_to_write)
@@ -145,7 +145,7 @@ def main():
 
 
     # 将结果写入Excel文件
-    writer = pd.ExcelWriter(filename)
+    writer = pd.ExcelWriter(window.filename)
     df.to_excel(writer, sheet_name='Sheet1', index=False)
     result_df.to_excel(writer, sheet_name='Sheet1', startcol=len(columns_to_read), index=False)
     writer.save()
