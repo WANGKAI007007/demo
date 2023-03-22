@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import sys
 import os
 
+
 def main():
     # 创建一个Tkinter窗口
     window = tk.Tk()
@@ -40,56 +41,217 @@ def main():
     open_button.pack()
     selected_file_label.pack()
 
+    # 添加输入框和标签，用于指定列名称
+    city_col_label = tk.Label(
+        text='城市列名称：'
+    )
+    city_col_entry = tk.Entry()
+    date_col_label = tk.Label(
+        text='日期列名称：'
+    )
+    date_col_entry = tk.Entry()
+    temp_col_label = tk.Label(
+        text='温度列名称：'
+    )
+    temp_col_entry = tk.Entry()
+    weather_col_label = tk.Label(
+        text='天气列名称：'
+    )
+    weather_col_entry = tk.Entry()
+    wind_col_label = tk.Label(
+        text='风力列名称：'
+    )
+    wind_col_entry = tk.Entry()
+
+    city_col_label.pack()
+    city_col_entry.pack()
+    date_col_label.pack()
+    date_col_entry.pack()
+    temp_col_label.pack()
+    temp_col_entry.pack()
+    weather_col_label.pack()
+    weather_col_entry.pack()
+    wind_col_label.pack()
+    wind_col_entry.pack()
+
     # 处理Excel文件的函数
     def process_excel_file(filename):
-        # 指定要读取的列
-        columns_to_read = ['城市', '日期']
+        # 获取用户指定的列名称
+        city_col = city_col_entry.get()
+        date_col = date_col_entry.get()
 
-        # 指定要写入的列
-        columns_to_write = ['温度', '天气', '风力']
+        # 获取用户指定的固定列名称
+        temp_col = temp_col_entry.get()
+        weather_col = weather_col_entry.get()
+        wind_col = wind_col_entry.get()
 
-        # 读取Excel文件
-        df = pd.read_excel(filename, usecols=columns_to_read)
+        # 检查列名称是否有效
+        if not city_col or not date_col:
+            error_label.config(text='请指定城市和日期的列名称')
+            return
+        elif city_col == date_col:
+            error_label.config(text='城市和日期的列名称不能相同')
+            return
+        else:
+            error_label.config(text='')
 
-        # 创建一个空的DataFrame，用于存储查找结果
-        result_df = pd.DataFrame(columns=columns_to_write)
+    # 指定要读取的列
+    columns_to_read = [city_col, date_col]
 
-        # 循环遍历每一行
-        for index, row in df.iterrows():
-            # 从当前行中获取城市和日期
-            city = row['城市']
-            date = row['日期']
+    # 指定要写入的列
+    columns_to_write = [temp_col, weather_col, wind_col]
 
-            # 构造查询URL
-            url = f'https://www.tianqi.com/{city}/{date}.html'
+    # 读取Excel文件
+    df = pd.read_excel(filename, usecols=columns_to_read)
 
-            # 发送请求并解析响应
-            response = requests.get(url)
-            soup = BeautifulSoup(response.text, 'html.parser')
+    # 创建一个空的DataFrame，用于存储查找结果
+    result_df = pd.DataFrame(columns=columns_to_write)
 
-            # 查找温度、天气和风力
-            temperature = soup.select('.weather .temp')[0].text
-            weather = soup.select('.weather .wea')[0].text
-            wind = soup.select('.weather .win')[0].text
+    # 循环遍历每一行
+    for index, row in df.iterrows():
+        # 从当前行中获取城市和日期
+        city = row[city_col]
+        date = row[date_col]
 
-            # 将结果添加到result_df中
-            result_df = result_df.append({
-                '温度': temperature,
-                '天气': weather,
-                '风力': wind
-            }, ignore_index=True)
+        # 构造查询URL
+        url = f'https://www.tianqi.com/{city}/{date}.html'
 
-        # 将结果写入Excel文件
-        writer = pd.ExcelWriter(filename)
-        df.to_excel(writer, sheet_name='Sheet1', index=False)
-        result_df.to_excel(writer, sheet_name='Sheet1', startcol=len(columns_to_read), index=False)
-        writer.save()
+        # 发送请求并解析响应
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-    # 运行Tkinter窗口
-    window.mainloop()
+        # 查找温度、天气和风力
+        temperature = soup.select('.weather .temp')[0].text
+        weather = soup.select('.weather .wea')[0].text
+        wind = soup.select('.weather .win')[0].text
 
-if __name__ == '__main__':
-    if getattr(sys, 'frozen', False):
-        # 如果是通过PyInstaller打包的可执行文件，则需要修改工作目录
-        os.chdir(sys._MEIPASS)
-    main()
+        # 将结果添加到result_df中
+        result_df = result_df.append({
+            '温度': temperature,
+            '天气': weather,
+            '风力': wind
+        }, ignore_index=True)
+
+
+    # 将结果写入Excel文件
+    writer = pd.ExcelWriter(filename)
+    df.to_excel(writer, sheet_name='Sheet1', index=False)
+    result_df.to_excel(writer, sheet_name='Sheet1', startcol=len(columns_to_read), index=False)
+    writer.save()
+
+    # 在标签上显示处理完成的消息
+    selected_file_label.config(text='处理完成')
+
+# 添加一个标签，用于显示错误消息
+error_label = tk.Label(
+    text='',
+    fg='red'
+)
+error_label.pack()
+
+# 添加一个按钮，用于开始处理Excel文件
+process_button = tk.Button(
+    text='开始处理',
+    command=start_processing
+)
+process_button.pack()
+
+# 在窗口上布局输入框、标签、按钮和错误提示
+city_col_entry = tk.Entry(
+    window,
+    width=30,
+    borderwidth=5
+)
+city_col_entry.pack()
+
+date_col_entry = tk.Entry(
+    window,
+    width=30,
+    borderwidth=5
+)
+date_col_entry.pack()
+
+temp_col_entry = tk.Entry(
+    window,
+    width=30,
+    borderwidth=5
+)
+temp_col_entry.pack()
+
+weather_col_entry = tk.Entry(
+    window,
+    width=30,
+    borderwidth=5
+)
+weather_col_entry.pack()
+
+wind_col_entry = tk.Entry(
+    window,
+    width=30,
+    borderwidth=5
+)
+wind_col_entry.pack()
+
+error_label = tk.Label(
+    text='',
+    fg='red'
+)
+error_label.pack()
+# 在窗口上布局输入框、标签、按钮和错误提示
+city_col_label = tk.Label(
+    text='城市列名称：'
+)
+city_col_entry = tk.Entry(
+    width=30
+)
+date_col_label = tk.Label(
+    text='日期列名称：'
+)
+date_col_entry = tk.Entry(
+    width=30
+)
+temp_col_label = tk.Label(
+    text='温度列名称：'
+)
+temp_col_entry = tk.Entry(
+    width=30
+)
+weather_col_label = tk.Label(
+    text='天气列名称：'
+)
+weather_col_entry = tk.Entry(
+    width=30
+)
+wind_col_label = tk.Label(
+    text='风力列名称：'
+)
+wind_col_entry = tk.Entry(
+    width=30)
+
+city_col_label.pack()
+city_col_entry.pack()
+date_col_label.pack()
+date_col_entry.pack()
+temp_col_label.pack()
+temp_col_entry.pack()
+weather_col_label.pack()
+weather_col_entry.pack()
+wind_col_label.pack()
+wind_col_entry.pack()
+
+# 添加一个按钮，用于开始处理Excel文件
+process_button = tk.Button(
+    text='开始处理',
+    command=start_processing
+)
+process_button.pack()
+
+# 添加一个标签，用于显示错误消息
+error_label = tk.Label(
+    text='',
+    fg='red'
+)
+error_label.pack()
+
+# 运行Tkinter窗口
+window.mainloop()
