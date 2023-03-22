@@ -204,10 +204,12 @@ wind_col_entry = tk.Entry(
 wind_col_entry.pack()
 
 error_label = tk.Label(
+    window,  # <-- 指定父组件
     text='',
     fg='red'
 )
 error_label.pack()
+
 # 在窗口上布局输入框、标签、按钮和错误提示
 city_col_label = tk.Label(
     text='城市列名称：'
