@@ -1,270 +1,59 @@
+import os
+import datetime
+import shutil
 import tkinter as tk
 from tkinter import filedialog
-import pandas as pd
-import requests
-from bs4 import BeautifulSoup
 
+class PhotoRenamer:
+    def __init__(self, master):
+        self.master = master
+        master.title("Photo Renamer")
 
-def main():
-    # 创建一个Tkinter窗口
-    window = tk.Tk()
+        self.src_label = tk.Label(master, text="Source Folder:")
+        self.src_label.grid(row=0, column=0, padx=10, pady=10)
 
-    # 添加一个按钮，用于打开文件选择对话框
-    def open_file():
-        filetypes = (
-            ('Excel Files', '*.xlsx'),
-            ('All Files', '*.*')
-        )
-        filename = filedialog.askopenfilename(
-            title='Select a file',
-            filetypes=filetypes
-        )
-        if filename:
-            # 在标签上显示选择的文件名
-            selected_file_label.config(text=filename)
-            # 保存文件名，以备处理
-            window.filename = filename
+        self.src_entry = tk.Entry(master, width=50)
+        self.src_entry.grid(row=0, column=1, padx=10, pady=10)
 
-    open_button = tk.Button(
-        text='选择Excel文件',
-        command=open_file
-    )
+        self.src_button = tk.Button(master, text="Browse", command=self.browse_src_folder)
+        self.src_button.grid(row=0, column=2, padx=10, pady=10)
 
-    # 添加一个标签，用于显示选择的文件名
-    selected_file_label = tk.Label(
-        text='未选择文件'
-    )
+        self.dst_label = tk.Label(master, text="Destination Folder:")
+        self.dst_label.grid(row=1, column=0, padx=10, pady=10)
 
-    # 在窗口上布局按钮和标签
-    open_button.pack()
-    selected_file_label.pack()
+        self.dst_entry = tk.Entry(master, width=50)
+        self.dst_entry.grid(row=1, column=1, padx=10, pady=10)
 
-    # 添加输入框和标签，用于指定列名称
-    city_col_label = tk.Label(
-        text='城市列名称：'
-    )
-    city_col_entry = tk.Entry()
-    date_col_label = tk.Label(
-        text='日期列名称：'
-    )
-    date_col_entry = tk.Entry()
-    temp_col_label = tk.Label(
-        text='温度列名称：'
-    )
-    temp_col_entry = tk.Entry()
-    weather_col_label = tk.Label(
-        text='天气列名称：'
-    )
-    weather_col_entry = tk.Entry()
-    wind_col_label = tk.Label(
-        text='风力列名称：'
-    )
-    wind_col_entry = tk.Entry()
+        self.dst_button = tk.Button(master, text="Browse", command=self.browse_dst_folder)
+        self.dst_button.grid(row=1, column=2, padx=10, pady=10)
 
-    city_col_label.pack()
-    city_col_entry.pack()
-    date_col_label.pack()
-    date_col_entry.pack()
-    temp_col_label.pack()
-    temp_col_entry.pack()
-    weather_col_label.pack()
-    weather_col_entry.pack()
-    wind_col_label.pack()
-    wind_col_entry.pack()
+        self.rename_button = tk.Button(master, text="Rename Photos", command=self.rename_photos)
+        self.rename_button.grid(row=2, column=1, padx=10, pady=10)
 
-    # 添加一个标签，用于显示处理完成的消息
-    process_label = tk.Label(
-        text=''
-    )
-    process_label.pack()
+    def browse_src_folder(self):
+        src_folder = filedialog.askdirectory()
+        self.src_entry.delete(0, tk.END)
+        self.src_entry.insert(0, src_folder)
 
-    # 添加一个标签，用于显示错误消息
-    error_label = tk.Label(
-        text='',
-        fg='red'
-    )
-    error_label.pack()
+    def browse_dst_folder(self):
+        dst_folder = filedialog.askdirectory()
+        self.dst_entry.delete(0, tk.END)
+        self.dst_entry.insert(0, dst_folder)
 
-    # 开始处理Excel文件的函数
-def start_processing():
-    # 获取用户指定的列名称
-    city_col = city_col_entry.get()
-    date_col = date_col_entry.get()
+    def rename_photos(self):
+        src_folder = self.src_entry.get()
+        dst_folder = self.dst_entry.get()
+        for root, dirs, files in os.walk(src_folder):
+            for file in files:
+                if os.path.splitext(file)[1].lower() in ('.jpg', '.jpeg', '.png', '.bmp', '.gif'):
+                    src_file = os.path.join(root, file)
+                    create_time = datetime.datetime.fromtimestamp(os.path.getctime(src_file))
+                    new_name = create_time.strftime("%Y%m%d%H%M%S") + os.path.splitext(src_file)[1]
+                    dst_file = os.path.join(dst_folder, new_name)
+                    shutil.copyfile(src_file, dst_file)
 
-    # 获取用户指定的固定列名称
-    temp_col = temp_col_entry.get()
-    weather_col = weather_col_entry.get()
-    wind_col = wind_col_entry.get()
+        tk.messagebox.showinfo("Success", "Photos renamed and saved to destination folder.")
 
-    # 检查列名称是否有效
-    if not city_col or not date_col:
-        error_label.config(text='请指定城市和日期的列名称')
-        return
-    elif city_col == date_col:
-        error_label.config(text='城市和日期的列名称不能相同')
-        return
-    else:
-        error_label.config(text='')
-
-    # 指定要读取的列
-    columns_to_read = [city_col, date_col]
-
-    # 指定要写入的列
-    columns_to_write = [temp_col, weather_col, wind_col]
-
-    # 读取Excel文件
-    df = pd.read_excel(window.filename, usecols=columns_to_read)
-
-    # 创建一个空的DataFrame，用于存储查找结果
-    result_df = pd.DataFrame(columns=columns_to_write)
-
-    # 循环遍历每一行
-    for index, row in df.iterrows():
-        # 从当前行中获取城市和日期
-        city = row[city_col]
-        date = row[date_col]
-
-        # 构造查询URL
-        url = f'https://www.tianqi.com/{city}/{date}.html'
-
-        # 发送请求并解析响应
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        # 查找温度、天气和风力
-        temperature = soup.select('.weather .temp')[0].text
-        weather = soup.select('.weather .wea')[0].text
-        wind = soup.select('.weather .win')[0].text
-
-        # 将结果添加到result_df中
-        result_df = result_df.append({
-            '温度': temperature,
-            '天气': weather,
-            '风力': wind
-        }, ignore_index=True)
-
-
-    # 将结果写入Excel文件
-    writer = pd.ExcelWriter(window.filename)
-    df.to_excel(writer, sheet_name='Sheet1', index=False)
-    result_df.to_excel(writer, sheet_name='Sheet1', startcol=len(columns_to_read), index=False)
-    writer.save()
-
-    # 在标签上显示处理完成的消息
-    selected_file_label.config(text='处理完成')
-
-# 添加一个标签，用于显示错误消息
-error_label = tk.Label(
-    text='',
-    fg='red'
-)
-error_label.pack()
-
-# 添加一个按钮，用于开始处理Excel文件
-process_button = tk.Button(
-    text='开始处理',
-    command=start_processing
-)
-process_button.pack()
-
-# 在窗口上布局输入框、标签、按钮和错误提示
-city_col_entry = tk.Entry(
-    window,
-    width=30,
-    borderwidth=5
-)
-city_col_entry.pack()
-
-date_col_entry = tk.Entry(
-    window,
-    width=30,
-    borderwidth=5
-)
-date_col_entry.pack()
-
-temp_col_entry = tk.Entry(
-    window,
-    width=30,
-    borderwidth=5
-)
-temp_col_entry.pack()
-
-weather_col_entry = tk.Entry(
-    window,
-    width=30,
-    borderwidth=5
-)
-weather_col_entry.pack()
-
-wind_col_entry = tk.Entry(
-    window,
-    width=30,
-    borderwidth=5
-)
-wind_col_entry.pack()
-
-error_label = tk.Label(
-    window,  # <-- 指定父组件
-    text='',
-    fg='red'
-)
-error_label.pack()
-
-# 在窗口上布局输入框、标签、按钮和错误提示
-city_col_label = tk.Label(
-    text='城市列名称：'
-)
-city_col_entry = tk.Entry(
-    width=30
-)
-date_col_label = tk.Label(
-    text='日期列名称：'
-)
-date_col_entry = tk.Entry(
-    width=30
-)
-temp_col_label = tk.Label(
-    text='温度列名称：'
-)
-temp_col_entry = tk.Entry(
-    width=30
-)
-weather_col_label = tk.Label(
-    text='天气列名称：'
-)
-weather_col_entry = tk.Entry(
-    width=30
-)
-wind_col_label = tk.Label(
-    text='风力列名称：'
-)
-wind_col_entry = tk.Entry(
-    width=30)
-
-city_col_label.pack()
-city_col_entry.pack()
-date_col_label.pack()
-date_col_entry.pack()
-temp_col_label.pack()
-temp_col_entry.pack()
-weather_col_label.pack()
-weather_col_entry.pack()
-wind_col_label.pack()
-wind_col_entry.pack()
-
-# 添加一个按钮，用于开始处理Excel文件
-process_button = tk.Button(
-    text='开始处理',
-    command=start_processing
-)
-process_button.pack()
-
-# 添加一个标签，用于显示错误消息
-error_label = tk.Label(
-    text='',
-    fg='red'
-)
-error_label.pack()
-
-# 运行Tkinter窗口
-window.mainloop()
+root = tk.Tk()
+app = PhotoRenamer(root)
+root.mainloop()
